@@ -14,19 +14,13 @@ Propex helps you keep a practical ledger of project costs, shared overhead, and 
 
 ## Screenshots
 
-Add screenshots to the `docs/images/` folder and replace these placeholders with their filenames.
+<img width="697" height="862" alt="image" src="https://github.com/user-attachments/assets/332e6e10-281b-4d0d-9a73-c0787be56ed3" />
 
-<!-- Screenshot: transaction ledger -->
-![Propex transaction ledger](docs/images/ledger.png)
+<img width="705" height="523" alt="image" src="https://github.com/user-attachments/assets/b17e9f41-f937-420a-a9e9-051bd5c3d405" />
 
-<!-- Screenshot: category report (donut, doughnut, pie, or polar area) -->
-![Propex category report](docs/images/report-category.png)
+<img width="702" height="609" alt="image" src="https://github.com/user-attachments/assets/340e7a40-3bd7-4a4c-97de-ead4f7cf48c0" />
 
-<!-- Screenshot: income and expense comparison (bar) -->
-![Propex comparison report](docs/images/report-comparison.png)
-
-<!-- Screenshot: net balance dynamics (line) -->
-![Propex balance report](docs/images/report-balance.png)
+<img width="1653" height="862" alt="image" src="https://github.com/user-attachments/assets/885b3b52-1d38-4337-9a42-178749350b26" />
 
 ## Getting started
 
@@ -118,3 +112,16 @@ Propex is designed for local use. It stores plugin data in the vault's Obsidian 
 ## Languages
 
 The interface is available in English and Russian. For other Obsidian locales, Propex falls back to English.
+
+### ☕ Support
+
+If you find **Propex** useful and want to support its development, you can buy me a coffee using crypto:
+
+<details>
+<summary><b>Donate via Crypto</b></summary>
+
+*USDT (TRC-20 / Tron):* `TLAazXrkdfZT2wLiF1mQ7ZRWjvRzEEG7oo`
+*USDT / TON:** `UQDEW6Ed66RGCrrpZTrQoF5ydL1RGyGwGdprCi_NwupYo3cb`
+*EVM (ETH / BSC / Polygon / Arbitrum):*`0xDF8A2b3CE652915C8e49d05A674838a39b548EBF`
+
+</details>
