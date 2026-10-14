@@ -121,7 +121,7 @@ If you find **Propex** useful and want to support its development, you can buy m
 <summary><b>Donate via Crypto</b></summary>
 
 *USDT (TRC-20 / Tron):* `TLAazXrkdfZT2wLiF1mQ7ZRWjvRzEEG7oo`
-*USDT / TON:** `UQDEW6Ed66RGCrrpZTrQoF5ydL1RGyGwGdprCi_NwupYo3cb`
+*USDT / TON:* `UQDEW6Ed66RGCrrpZTrQoF5ydL1RGyGwGdprCi_NwupYo3cb`
 *EVM (ETH / BSC / Polygon / Arbitrum):*`0xDF8A2b3CE652915C8e49d05A674838a39b548EBF`
 
 </details>
