@@ -76,23 +76,38 @@
 	{#if items.length === 0}
 		<div class="propex-donut-empty">{emptyLabel}</div>
 	{:else}
-		<div class="propex-donut-canvas">
+		<div class="propex-canvas-box">
 			<canvas bind:this={canvas} aria-label={t("chartAriaLabel")} aria-describedby={summaryId}></canvas>
-				<span id={summaryId} class="sr-only">{summary}</span>
 		</div>
+		<span id={summaryId} class="propex-chart-summary">{summary}</span>
 	{/if}
 </div>
 
 <style>
 	.propex-donut {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
 		width: 100%;
-		min-height: 220px;
+		height: auto;
+		max-height: none;
+		overflow: visible;
 	}
 
-	.propex-donut-canvas {
+	.propex-canvas-box {
 		position: relative;
+		flex: 0 0 260px;
 		width: 100%;
-		height: 280px;
+		height: 260px;
+	}
+
+	.propex-chart-summary {
+		position: static;
+		width: auto;
+		height: auto;
+		overflow: visible;
+		color: var(--text-muted);
+		font-size: var(--font-ui-small);
 	}
 
 	.propex-donut-empty {

@@ -30,19 +30,19 @@ export function resolveActiveProjectIds(
 	const criteria: OverheadActiveCriteria = settings.overheadActiveCriteria;
 
 	if (criteria === "all_cached") {
-		return allProjects.map((p) => p.filePath);
+		return allProjects.map((p) => p.name);
 	}
 
 	if (criteria === "frontmatter_flag") {
-		return allProjects.filter((p) => isProjectActiveFlag(p.filePath)).map((p) => p.filePath);
+		return allProjects.filter((p) => isProjectActiveFlag(p.filePath)).map((p) => p.name);
 	}
 
 	// period_transactions: projects with >=1 direct transaction in the report period (full dataset here).
 	const withDirect = new Set<string>();
 	for (const transaction of transactions) {
-		if (transaction.projectId !== null) withDirect.add(transaction.projectId);
+		if (transaction.projectId !== null) withDirect.add(transaction.projectId.trim().toLowerCase());
 	}
-	return allProjects.filter((p) => withDirect.has(p.filePath)).map((p) => p.filePath);
+	return allProjects.filter((p) => withDirect.has(p.name.trim().toLowerCase())).map((p) => p.name);
 }
 
 export type MaterializedTransaction = Transaction & { overheadFraction?: number };
@@ -83,16 +83,16 @@ export function materializeOverhead(
 		return result;
 	}
 
-	const activeSet = new Set(activeProjectIds);
-	if (!activeSet.has(targetProjectId)) return result;
+	const activeSet = new Set(activeProjectIds.map((id) => id.trim().toLowerCase()));
+	if (!activeSet.has(targetProjectId.trim().toLowerCase())) return result;
 
 	let fraction = 0;
 	if (mode === "split_equally") {
 		fraction = activeProjectIds.length > 0 ? 1 / activeProjectIds.length : 0;
 	} else if (mode === "proportional") {
 		const spend = options.directSpendByProject ?? new Map<string, number>();
-		const targetSpend = spend.get(targetProjectId) ?? 0;
-		const totalActive = activeProjectIds.reduce((sum, id) => sum + (spend.get(id) ?? 0), 0);
+		const targetSpend = spend.get(targetProjectId.trim().toLowerCase()) ?? 0;
+		const totalActive = activeProjectIds.reduce((sum, id) => sum + (spend.get(id.trim().toLowerCase()) ?? 0), 0);
 		if (totalActive > 0) fraction = targetSpend / totalActive;
 		else fraction = activeProjectIds.length > 0 ? 1 / activeProjectIds.length : 0;
 	}
@@ -140,7 +140,7 @@ export function buildOverheadAllocation(options: {
 	);
 
 	const directExpenses = transactions.filter(
-		(t) => isExpense(t) && t.projectId !== null && (targetProjectId === null || t.projectId === targetProjectId),
+		(t) => isExpense(t) && t.projectId !== null && (targetProjectId === null || t.projectId.trim().toLowerCase() === targetProjectId.trim().toLowerCase()),
 	);
 	const overheadExpenses = transactions.filter((t) => isExpense(t) && t.projectId === null);
 
@@ -157,20 +157,20 @@ export function buildOverheadAllocation(options: {
 	let allocatedOverhead = 0;
 	let overheadSeparate = 0;
 
-	const activeSet = new Set(activeProjectIds);
-	const isActiveTarget = targetProjectId !== null && activeSet.has(targetProjectId);
+	const activeSet = new Set(activeProjectIds.map((id) => id.trim().toLowerCase()));
+	const isActiveTarget = targetProjectId !== null && activeSet.has(targetProjectId.trim().toLowerCase());
 
 	const directSpendByProject = new Map<string, number>();
 	for (const transaction of transactions) {
 		if (!isExpense(transaction) || transaction.projectId === null) continue;
 		directSpendByProject.set(
-			transaction.projectId,
-			(directSpendByProject.get(transaction.projectId) ?? 0) + transaction.amount,
+			transaction.projectId.trim().toLowerCase(),
+			(directSpendByProject.get(transaction.projectId.trim().toLowerCase()) ?? 0) + transaction.amount,
 		);
 	}
 
 	const totalActiveDirectSpend = activeProjectIds.reduce(
-		(sum, id) => sum + (directSpendByProject.get(id) ?? 0),
+		(sum, id) => sum + (directSpendByProject.get(id.trim().toLowerCase()) ?? 0),
 		0,
 	);
 
@@ -195,7 +195,7 @@ export function buildOverheadAllocation(options: {
 			}
 		}
 	} else if (mode === "proportional") {
-		const targetShareBase = directSpendByProject.get(targetProjectId) ?? 0;
+		const targetShareBase = directSpendByProject.get(targetProjectId.trim().toLowerCase()) ?? 0;
 		if (totalActiveDirectSpend > 0) {
 			const share = targetShareBase / totalActiveDirectSpend;
 			for (const transaction of overheadExpenses) {

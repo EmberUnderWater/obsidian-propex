@@ -93,7 +93,7 @@ export async function makeNoteAProject(plugin: PropexPlugin, app: App): Promise<
 		return;
 	}
 
-	const existing = plugin.projectCache.getProject(file.path);
+	const existing = plugin.projectCache.getProjectForLegacyId(file.path);
 	if (existing) {
 		new Notice(t("makeProjectAlready", { name: existing.name, file: fileNameOf(existing.filePath) }));
 		return;

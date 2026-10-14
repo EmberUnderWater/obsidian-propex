@@ -30,6 +30,7 @@ export default class PropexPlugin extends Plugin {
 			this.projectCache.rebuild();
 		});
 		this.projectCache.init();
+		void this.projectCache.normalizeLegacyTransactions();
 
 		this.settingTab = new PropexSettingTab(this.app, this);
 		this.addSettingTab(this.settingTab);

@@ -46,7 +46,7 @@
 
 	function openProjectPicker(): void {
 		new ProjectSuggestModal(app, plugin.projectCache.getProjects(), (pick) => {
-			projectId = pick.filePath;
+			projectId = pick.projectId;
 			projectTouched = true;
 			projects = plugin.projectCache.getProjects();
 		}).open();
@@ -174,7 +174,7 @@
 	onMount(() => {
 		const activeProject = plugin.projectCache.getProjectByActiveFile();
 		if (!isEdit && activeProject) {
-			projectId = activeProject.filePath;
+			projectId = activeProject.name.trim();
 			projectTouched = true;
 		} else if (!isEdit && plugin.dataStore.settings.smartContext) {
 			const activeFile = app.workspace.getActiveFile();
@@ -182,7 +182,7 @@
 				? plugin.projectCache.resolveSmartProject(activeFile.path)
 				: undefined;
 			if (smart) {
-				projectId = smart.filePath;
+				projectId = smart.name.trim();
 				projectTouched = true;
 			}
 		}

@@ -3,6 +3,7 @@ import { t } from "../locales";
 import type { DataStore } from "../data/dataStore";
 import type { CachedProject, PropexSettings } from "../types";
 import { debounce } from "../utils/debounce";
+import { legacyProjectName, normalizeProjectName } from "../utils/projectName";
 
 function isPrimitiveFrontmatterValue(raw: unknown): boolean {
 	return (
@@ -51,6 +52,8 @@ function resolveProjectNameFromRaw(raw: unknown, fallback: string): string {
 
 export class ProjectCache {
 	private readonly projects = new Map<string, CachedProject>();
+	private projectOrder = 0;
+	private readonly orderByPath = new Map<string, number>();
 	private readonly pendingRefreshPaths = new Set<string>();
 	private readonly flushPendingRefresh: ReturnType<typeof debounce<[]>>;
 	private readonly listeners = new Set<() => void>();
@@ -168,9 +171,12 @@ export class ProjectCache {
 			this.app.vault.on("delete", (file) => {
 				this.dropPending(file.path);
 				if (file instanceof TFile) {
+					this.orderByPath.delete(file.path);
 					if (this.projects.delete(file.path)) this.notify();
+					void this.normalizeLegacyTransactions();
 				} else {
 					this.removeUnder(file.path);
+					void this.normalizeLegacyTransactions();
 				}
 			}),
 		);
@@ -178,26 +184,54 @@ export class ProjectCache {
 
 	rebuild(): void {
 		this.projects.clear();
+		this.orderByPath.clear();
+		this.projectOrder = 0;
 		for (const file of this.app.vault.getMarkdownFiles()) {
 			this.refreshFile(file);
 		}
 		this.notify();
+		void this.normalizeLegacyTransactions();
 	}
 
 	getProjects(): CachedProject[] {
-		return Array.from(this.projects.values()).sort((a, b) =>
+		const unique = new Map<string, CachedProject>();
+		for (const project of this.projects.values()) {
+			const key = normalizeProjectName(project.name);
+			const existing = unique.get(key);
+			if (!existing || (this.orderByPath.get(project.filePath) ?? Infinity) < (this.orderByPath.get(existing.filePath) ?? Infinity)) {
+				unique.set(key, project);
+			}
+		}
+		return Array.from(unique.values()).sort((a, b) =>
 			a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
 		);
 	}
 
-	getProject(filePath: string): CachedProject | undefined {
-		return this.projects.get(filePath);
+	getProject(projectName: string): CachedProject | undefined {
+		const key = normalizeProjectName(projectName);
+		const byName = this.getProjects().find((project) => normalizeProjectName(project.name) === key);
+		return byName ?? this.getProjectForLegacyId(projectName);
 	}
 
 	getProjectByActiveFile(): CachedProject | undefined {
 		const file = this.app.workspace.getActiveFile();
 		if (!file) return undefined;
-		return this.projects.get(file.path);
+		const cached = this.projects.get(file.path);
+		return cached ? this.getProject(cached.name) : undefined;
+	}
+
+	getProjectForLegacyId(value: string): CachedProject | undefined {
+		const normalizedPath = value.trim().replace(/\\/g, "/").toLowerCase();
+		const byPath = Array.from(this.projects.values()).find(
+			(project) => project.filePath.toLowerCase() === normalizedPath,
+		);
+		if (byPath) return this.getProjects().find(
+			(project) => normalizeProjectName(project.name) === normalizeProjectName(byPath.name),
+		);
+		const legacyName = legacyProjectName(value);
+		return this.getProjects().find(
+			(project) => normalizeProjectName(project.name) === normalizeProjectName(legacyName),
+		);
 	}
 
 	/**
@@ -258,16 +292,27 @@ export class ProjectCache {
 			const cached = this.projects.get(from);
 			if (cached) {
 				this.projects.delete(from);
+				const order = this.orderByPath.get(from);
+				this.orderByPath.delete(from);
+				if (order !== undefined) this.orderByPath.set(to, order);
 				this.projects.set(to, { filePath: to, name: cached.name });
 				this.notify();
 			}
 		}
 
-		await this.dataStore.remapProjectPaths(oldPath, newPath);
-		if (this.isUnloaded) return;
-
 		// Rebuild from current vault state after async work; older event snapshots may be stale.
 		this.rebuild();
+		await this.normalizeLegacyTransactions();
+		if (this.isUnloaded) return;
+	}
+
+	resolveProjectId(value: string): string {
+		const project = this.getProjectForLegacyId(value);
+		return project?.name ?? legacyProjectName(value).trim();
+	}
+
+	async normalizeLegacyTransactions(): Promise<void> {
+		await this.dataStore.normalizeProjectIds((value) => this.resolveProjectId(value));
 	}
 
 	private removeUnder(path: string): void {
@@ -276,6 +321,7 @@ export class ProjectCache {
 		for (const key of this.projects.keys()) {
 			if (key.startsWith(prefix)) {
 				this.projects.delete(key);
+				this.orderByPath.delete(key);
 				removed = true;
 			}
 		}
@@ -286,14 +332,20 @@ export class ProjectCache {
 		const settings = this.dataStore.settings;
 		const prev = this.projects.get(file.path);
 		if (this.matchesCriteria(file, settings)) {
+			const name = this.resolveProjectName(file, settings).trim();
 			const next: CachedProject = {
 				filePath: file.path,
-				name: this.resolveProjectName(file, settings),
+				name,
 			};
 			this.projects.set(file.path, next);
-			if (!prev || prev.name !== next.name) this.notify();
+			if (!this.orderByPath.has(file.path)) this.orderByPath.set(file.path, this.projectOrder++);
+			if (!prev || prev.name !== next.name) {
+				this.notify();
+				void this.normalizeLegacyTransactions();
+			}
 		} else {
 			this.projects.delete(file.path);
+			this.orderByPath.delete(file.path);
 			if (prev) this.notify();
 		}
 	}

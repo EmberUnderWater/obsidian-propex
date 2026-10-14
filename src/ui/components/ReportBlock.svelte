@@ -95,7 +95,7 @@
 	$: availableCategories = model?.filterCategories ?? [];
 	$: overheadSeparate = model?.allocation.overheadSeparate ?? 0;
 	$: limit = model?.config.tableLimit ?? 5;
-	$: rowsVisible = model ? collapsedRows(model, limit) : [];
+	$: rowsVisible = model ? (tableExpanded || limit === 0 ? model.rows.all : model.rows.all.slice(0, limit)) : [];
 	$: totalRows = model?.rows.all.length ?? 0;
 	$: hiddenCount = Math.max(0, totalRows - rowsVisible.length);
 	$: showTable = model?.config.showTable ?? true;
@@ -140,7 +140,7 @@
 			</div>
 		{/if}
 
-		<section class="propex-report-section">
+		<section class="propex-report-section propex-report-table-section">
 			<h4>{chartTitle(model)}</h4>
 			{#if model.chart.kind === "category" && model.chart.mode === "split" && model.chart.pair}
 				<div class="propex-split-charts">
@@ -219,7 +219,7 @@
 		{/if}
 
 		{#if showTable}
-			<section class="propex-report-section">
+			<section class="propex-report-section propex-report-table-section">
 				<div class="propex-report-table-head">
 					<h4>{t("reportRecent")}</h4>
 					{#if totalRows > rowsVisible.length || tableExpanded}
@@ -373,6 +373,10 @@
 		color: var(--text-muted);
 	}
 
+	.propex-report-table-section {
+		margin-top: 16px;
+	}
+
 	.propex-report-table-head {
 		display: flex;
 		align-items: center;
@@ -381,6 +385,8 @@
 	}
 
 	.propex-link {
+		position: relative;
+		z-index: 2;
 		border: none;
 		background: transparent;
 		color: var(--text-accent);

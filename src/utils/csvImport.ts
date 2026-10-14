@@ -1,5 +1,6 @@
 import type { TransactionInput } from "../data/dataStore";
 import type { CsvSeparator } from "../types/settings";
+import { legacyProjectName } from "./projectName";
 
 export type CsvParseResult =
 	| { ok: true; transactions: TransactionInput[]; invalidRows: number }
@@ -97,7 +98,7 @@ export function parseTransactionsCsv(content: string, separator: CsvSeparator): 
 			date: row[2],
 			amount: Number(row[3]),
 			currency: row[4],
-			projectId: row[5] === "" ? null : row[5],
+			projectId: row[5] === "" ? null : legacyProjectName(row[5]),
 			category: row[6],
 			comment: row[7],
 		});

@@ -1,5 +1,6 @@
 import { Notice, type Plugin } from "obsidian";
 import { getDefaultCategories, t } from "../locales";
+import { legacyProjectName } from "../utils/projectName";
 import {
 	SCHEMA_VERSION,
 	createDefaultSettings,
@@ -40,7 +41,12 @@ function sanitizeTransactions(raw: unknown): Transaction[] {
 	if (!Array.isArray(raw)) return [];
 	const valid: Transaction[] = [];
 	for (const item of raw) {
-		if (isValidTransaction(item)) valid.push(item);
+		if (isValidTransaction(item)) {
+			valid.push({
+				...item,
+				projectId: item.projectId === null ? null : legacyProjectName(item.projectId),
+			});
+		}
 	}
 	return valid;
 }
@@ -268,6 +274,7 @@ export class DataStore {
 			const now = new Date().toISOString();
 			const transaction: Transaction = {
 				...input,
+				projectId: input.projectId === null ? null : input.projectId.trim(),
 				id: crypto.randomUUID(),
 				createdAt: now,
 				updatedAt: now,
@@ -289,7 +296,10 @@ export class DataStore {
 				date: patch.date ?? current.date,
 				amount: patch.amount ?? current.amount,
 				currency: patch.currency ?? current.currency,
-				projectId: patch.projectId !== undefined ? patch.projectId : current.projectId,
+				projectId:
+					patch.projectId !== undefined
+						? patch.projectId === null ? null : patch.projectId.trim()
+						: current.projectId,
 				category: patch.category ?? current.category,
 				comment: patch.comment ?? current.comment,
 				createdAt: current.createdAt,
@@ -308,19 +318,15 @@ export class DataStore {
 		});
 	}
 
-	remapProjectPaths(oldPath: string, newPath: string): Promise<void> {
+	normalizeProjectIds(resolve: (value: string) => string): Promise<void> {
 		return this.mutate(() => {
-			const oldPrefix = oldPath.endsWith("/") ? oldPath : `${oldPath}/`;
-			const newPrefix = newPath.endsWith("/") ? newPath : `${newPath}/`;
-			const now = new Date().toISOString();
 			let changed = false;
+			const now = new Date().toISOString();
 			for (const transaction of this.data.transactions) {
-				if (transaction.projectId === oldPath) {
-					transaction.projectId = newPath;
-					transaction.updatedAt = now;
-					changed = true;
-				} else if (transaction.projectId !== null && transaction.projectId.startsWith(oldPrefix)) {
-					transaction.projectId = newPrefix + transaction.projectId.slice(oldPrefix.length);
+				if (transaction.projectId === null) continue;
+				const projectId = resolve(transaction.projectId).trim();
+				if (projectId && transaction.projectId !== projectId) {
+					transaction.projectId = projectId;
 					transaction.updatedAt = now;
 					changed = true;
 				}

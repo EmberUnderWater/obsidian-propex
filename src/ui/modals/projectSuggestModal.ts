@@ -1,10 +1,11 @@
 import { SuggestModal, type App } from "obsidian";
 import { t } from "../../locales";
 import type { CachedProject } from "../../types";
+import { normalizeProjectName } from "../../utils/projectName";
 
 export interface ProjectPick {
 	/** null = overhead / shared costs */
-	filePath: string | null;
+	projectId: string | null;
 	name: string;
 }
 
@@ -22,10 +23,15 @@ export class ProjectSuggestModal extends SuggestModal<ProjectPick> {
 	) {
 		super(app);
 		this.setPlaceholder(t("projectPlaceholder"));
+		const unique = new Map<string, CachedProject>();
+		for (const project of projects) {
+			const key = normalizeProjectName(project.name);
+			if (!unique.has(key)) unique.set(key, project);
+		}
 		this.items = [
-			{ filePath: null, name: t("overheadOption") },
-			...projects.map((project) => ({
-				filePath: project.filePath,
+			{ projectId: null, name: t("overheadOption") },
+			...Array.from(unique.values()).map((project) => ({
+				projectId: project.name.trim(),
 				name: project.name,
 			})),
 		];
@@ -43,6 +49,6 @@ export class ProjectSuggestModal extends SuggestModal<ProjectPick> {
 
 	onChooseSuggestion(item: ProjectPick | null, _evt: MouseEvent | KeyboardEvent): void {
 		if (!item) return;
-		this.onChoose({ filePath: item.filePath, name: item.name });
+		this.onChoose({ projectId: item.projectId, name: item.name });
 	}
 }

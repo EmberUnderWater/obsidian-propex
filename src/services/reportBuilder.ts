@@ -78,29 +78,18 @@ export function resolveReportScope(
 	if (ref.kind === "global") return { kind: "global" };
 
 	if (ref.kind === "self") {
-		const project = plugin.projectCache.getProject(sourcePath);
+		const sourceFile = plugin.app.vault.getAbstractFileByPath(sourcePath);
+		const project = sourceFile instanceof TFile ? plugin.projectCache.getProjectForLegacyId(sourceFile.path) : undefined;
 		if (!project) return { kind: "missing", reason: "not_project" };
 		return { kind: "project", project };
 	}
 
 	const needle = ref.name.trim().toLowerCase();
 	const projects = plugin.projectCache.getProjects();
-	const byName = projects.find((p) => p.name.toLowerCase() === needle);
-	if (byName) return { kind: "project", project: byName };
-
-	const byPath = projects.find(
-		(p) =>
-			p.filePath.toLowerCase() === needle ||
-			p.filePath.toLowerCase().endsWith(`/${needle}.md`) ||
-			p.filePath.toLowerCase() === `${needle}.md`,
-	);
-	if (byPath) return { kind: "project", project: byPath };
-
-	const byBasename = projects.find((p) => {
-		const base = p.filePath.split("/").pop()?.replace(/\.md$/i, "").toLowerCase();
-		return base === needle;
+	const byName = projects.find((project) => {
+		return project.name.trim().toLowerCase() === needle;
 	});
-	if (byBasename) return { kind: "project", project: byBasename };
+	if (byName) return { kind: "project", project: byName };
 
 	return { kind: "missing", reason: "not_found" };
 }
@@ -151,14 +140,14 @@ export function buildReportModel(
 	const currency = settings.baseCurrency;
 
 	const allProjects = plugin.projectCache.getProjects();
-	const targetProjectId = scope.kind === "project" ? scope.project.filePath : null;
+	const targetProjectId = scope.kind === "project" ? scope.project.name : null;
 
 	const projectScoped: Transaction[] =
 		scope.kind === "global"
 			? plugin.dataStore.transactions
 			: scope.kind === "project"
 				? plugin.dataStore.transactions.filter(
-						(t) => t.projectId === scope.project.filePath || t.projectId === null,
+						(t) => t.projectId === null || t.projectId.trim().toLowerCase() === scope.project.name.trim().toLowerCase(),
 					)
 				: [];
 

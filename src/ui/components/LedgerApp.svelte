@@ -71,14 +71,16 @@
 		const options = [
 			{ value: PROJECT_ALL, label: t("filterAllProjects") },
 			{ value: PROJECT_OVERHEAD, label: t("overheadOption") },
-			...projectList.map((project) => ({ value: project.filePath, label: project.name })),
+			...projectList.map((project) => ({ value: project.name.trim(), label: project.name })),
 		];
 
-		const known = new Set(projectList.map((p) => p.filePath));
+		const known = new Set(projectList.map((project) => project.name.trim().toLowerCase()));
 		for (const transaction of txList) {
-			if (transaction.projectId && !known.has(transaction.projectId)) {
-				options.push({ value: transaction.projectId, label: transaction.projectId });
-				known.add(transaction.projectId);
+			const projectId = transaction.projectId?.trim();
+			const key = projectId?.toLowerCase();
+			if (projectId && key && !known.has(key)) {
+				options.push({ value: projectId, label: projectId });
+				known.add(key);
 			}
 		}
 
@@ -99,7 +101,7 @@
 		if (project === PROJECT_OVERHEAD) {
 			if (transaction.projectId !== null) return false;
 		} else if (project !== PROJECT_ALL) {
-			if (transaction.projectId !== project) return false;
+			if (transaction.projectId?.trim().toLowerCase() !== project.trim().toLowerCase()) return false;
 		}
 
 		if (categoriesSelected.length > 0 && !categoriesSelected.includes(transaction.category)) {
@@ -125,8 +127,8 @@
 				result = a.date.localeCompare(b.date);
 				break;
 			case "project":
-				result = (a.projectId === null ? t("overheadOption") : projectNames.get(a.projectId) ?? a.projectId)
-					.localeCompare(b.projectId === null ? t("overheadOption") : projectNames.get(b.projectId) ?? b.projectId);
+				result = (a.projectId === null ? t("overheadOption") : projectNames.get(a.projectId.trim().toLowerCase()) ?? a.projectId)
+					.localeCompare(b.projectId === null ? t("overheadOption") : projectNames.get(b.projectId.trim().toLowerCase()) ?? b.projectId);
 				break;
 			case "category":
 				result = a.category.localeCompare(b.category);
@@ -229,7 +231,7 @@
 	$: filtered = transactions.filter((tx) =>
 		matchesFilters(tx, dateFrom, dateTo, projectFilter, categoryFilter, searchDebounced),
 	);
-	$: projectNames = new Map(projects.map((project) => [project.filePath, project.name]));
+	$: projectNames = new Map(projects.map((project) => [project.name.trim().toLowerCase(), project.name]));
 	$: sorted = [...filtered].sort((a, b) => compare(a, b, sortKey, sortDir, projectNames));
 	$: total = sorted.reduce((sum, transaction) => sum + signedAmount(transaction), 0);
 	$: applySearchDebounced(search);
@@ -278,9 +280,13 @@
 				<input type="search" bind:value={search} placeholder={t("filterSearchPlaceholder")} />
 			</label>
 		</div>
-		<button type="button" class="propex-btn" on:click={exportCsv}>{t("exportCsv")}</button>
-		<button type="button" class="propex-btn" on:click={() => importInput?.click()}>{t("importCsv")}</button>
-		<input bind:this={importInput} type="file" accept=".csv,text/csv" hidden on:change={importCsv} />
+		<div class="propex-ledger-actions">
+			<div class="propex-ledger-actions">
+				<button type="button" class="propex-btn" on:click={exportCsv}>{t("exportCsv")}</button>
+				<button type="button" class="propex-btn" on:click={() => importInput?.click()}>{t("importCsv")}</button>
+				<input bind:this={importInput} type="file" accept=".csv,text/csv" hidden on:change={importCsv} />
+			</div>
+		</div>
 	</div>
 
 	<div class="propex-table-wrap">
@@ -351,6 +357,13 @@
 		gap: var(--size-4-3);
 		align-items: flex-end;
 		justify-content: space-between;
+	}
+
+	.propex-ledger-actions {
+		display: flex;
+		flex: 0 0 auto;
+		gap: 8px;
+		margin-left: auto;
 	}
 
 	.propex-filters {
