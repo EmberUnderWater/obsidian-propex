@@ -1,8 +1,13 @@
-/*
+/* Propex styles — Obsidian CSS variables only */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.propex-categories-details {
+	margin-bottom: var(--size-4-3);
+}
 
-If your plugin does not need CSS, delete this file.
+.propex-categories-summary {
+	cursor: pointer;
+	font-weight: var(--font-semibold);
+	color: var(--text-normal);
+	margin-bottom: var(--size-4-2);
+}
 
-*/

@@ -1,92 +1,120 @@
-# Obsidian Sample Plugin
+# Propex
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+**Project-aware expense and income tracking inside Obsidian.**
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+Propex helps you keep a practical ledger of project costs, shared overhead, and income without leaving your vault. Record transactions in one place, associate them with project notes, and embed live summaries directly in your notes. The plugin is designed around a simple idea: your financial context belongs alongside the projects and decisions it describes.
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
+## Why Propex
 
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and outputs a Notice on click.
-- Registers a global interval which logs 'setInterval' to the console.
+- **Keep records in your vault.** Transactions are stored locally in the plugin's `data.json`; no external account or cloud service is required.
+- **Connect transactions to project notes.** Identify projects through frontmatter or a folder, then review each project's activity in context.
+- **See both the ledger and the picture.** Filter and sort transactions, and add category, comparison, or balance reports to Markdown notes.
+- **Account for shared costs.** Choose how overhead is presented or allocated in reports without rewriting the source transaction.
+- **Make it yours.** Configure categories, currency, project detection, validation, overhead rules, and CSV formatting.
 
-## First time developing plugins?
+## Screenshots
 
-Quick starting guide for new plugin devs:
+Add screenshots to the `docs/images/` folder and replace these placeholders with their filenames.
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `src/main.ts` to `main.js`.
-- Make changes to `src/main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+<!-- Screenshot: transaction ledger -->
+![Propex transaction ledger](docs/images/ledger.png)
 
-## Releasing new releases
+<!-- Screenshot: category report (donut, doughnut, pie, or polar area) -->
+![Propex category report](docs/images/report-category.png)
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+<!-- Screenshot: income and expense comparison (bar) -->
+![Propex comparison report](docs/images/report-comparison.png)
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+<!-- Screenshot: net balance dynamics (line) -->
+![Propex balance report](docs/images/report-balance.png)
 
-## Adding your plugin to the community plugin list
+## Getting started
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+1. Install and enable Propex in **Settings → Community plugins**.
+2. Open **Settings → Propex** and configure how project notes are detected.
+3. Add transactions using the **Add transaction** command.
+4. Open the ledger with **Open Ledger** to review, filter, import, or export transactions.
+5. Add a `propex` code block to a Markdown note to display a report.
 
-## How to use
+By default, projects are detected by a `type: project` frontmatter value, project names come from the note's filename, and the base currency is selected from the Obsidian locale (RUB for Russian, USD otherwise). These defaults can be changed in settings.
 
-- Clone this repo.
-- Make sure your NodeJS is at least v18 (`node --version`).
-- `npm i` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+## Commands
 
-## Manually installing the plugin
+| Command | Purpose |
+| --- | --- |
+| **Add transaction** | Opens the transaction form to create an expense or income entry. |
+| **Open Ledger** | Opens the Propex transaction ledger. |
+| **Make note a project** | Marks the active Markdown note as a project by writing the configured project-detection frontmatter key and related configured metadata. This command is available when project detection uses frontmatter; it is unavailable in folder mode. |
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+The ledger can also be opened using the Propex ribbon icon.
 
-## Improve code quality with eslint
+## Transaction ledger
 
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code.
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
+The ledger provides date, project, category, and comment search filters. Select table headers to change sorting. Each transaction can be edited or deleted. Use **Import CSV** and **Export CSV** to move records in or out of Propex; the export separator can be configured in settings.
 
-## Funding URL
+A transaction contains:
 
-You can include funding URLs where people who use your plugin can financially support it.
+- **Type:** expense or income.
+- **Date, amount, currency, and category.** Amounts must be positive; the type determines whether the amount is treated as income or expense.
+- **Project:** a detected project, or **Overhead (shared costs)** for a shared transaction.
+- **Comment:** optional unless **Require comment** is enabled.
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+The base currency is applied to new transactions. Propex does not perform currency conversion.
 
-```json
-{
-	"fundingUrl": "https://buymeacoffee.com"
-}
+## Reports in notes
+
+Use a fenced `propex` block. Keys are case-insensitive; values are normalized so spaces, hyphens, and underscores do not affect enum matching. Unknown keys are ignored, and invalid values fall back to the documented default.
+
+```propex
+project: self
+chart_type: donut
+data_scope: all
+period: all
+group_by: period
+show_table: true
+table_limit: 5
 ```
 
-If you have multiple URLs, you can also do:
+### Report parameters
 
-```json
-{
-	"fundingUrl": {
-		"Buy Me a Coffee": "https://buymeacoffee.com",
-		"GitHub Sponsor": "https://github.com/sponsors",
-		"Patreon": "https://www.patreon.com/"
-	}
-}
-```
+| Parameter | Accepted values | Default and behavior |
+| --- | --- | --- |
+| `project` | `self`, `global`, or a project name | `self`. `self` uses the note containing the block, which must resolve to a project. `global` includes all projects. A name selects a matching project. If omitted or empty, defaults to `self`. |
+| `chart_type` | `donut`, `doughnut`, `pie`, `polarArea`, `bar`, `line` | `donut`. The first four show category totals; `bar` compares income and expenses; `line` shows cumulative net balance. |
+| `data_scope` | `expenses`, `income`, `all` | `all` when omitted. Selects which transaction types feed the report. With a category chart and `all`, the report renders two charts: expenses and income. |
+| `period` | `all`, `day`, `week`, `month`, `year` | `all`. Calendar periods are relative to the current date; weeks start on Monday. An explicit date bound overrides this period filter. |
+| `date_start` | `YYYY-MM-DD` or `null` / `~` | No lower bound. Inclusive. |
+| `date_end` | `YYYY-MM-DD` or `null` / `~` | No upper bound. Inclusive. |
+| `group_by` | `category`, `period`, `week` | `period`. Applies to bar reports: category groups transactions by category; period groups by date bucket; week groups by ISO week. |
+| `show_table` | `true`, `false` (also `yes`/`no`, `on`/`off`, `1`/`0`) | `true`. Shows or hides the transaction table below the chart. |
+| `table_limit` | Integer from `0` to `200` | `5`. Initial number of visible table rows; the table can be expanded. `0` shows all rows immediately. |
 
-## API Documentation
+Date bounds can be used independently. For example, `date_start: 2025-01-01` with no `date_end` includes all later dates. If either bound is valid and present, `period` is not used to filter the report.
 
-See https://docs.obsidian.md
+### Report types
+
+- **Category distribution:** `donut`, `doughnut`, `pie`, and `polarArea` display totals by category. Choose `data_scope: expenses` or `income` for one chart; `all` renders separate expense and income charts.
+- **Income vs. expenses:** `bar` displays income and expense totals. `group_by: category` groups by category; `period` groups by date bucket; `week` groups by ISO week. The `data_scope` controls which side is included.
+- **Balance dynamics:** `line` displays cumulative net balance over time (income minus expenses). `data_scope: all` gives the combined net; choosing `income` or `expenses` scopes the transactions accordingly.
+
+Reports for a project include that project's transactions and shared overhead entries. The global report includes all transactions. Overhead allocation settings affect report output only; the source transactions are not modified. When a project has a `budget` value in frontmatter (or the configured budget key), the report can also show budget progress.
+
+## Settings
+
+The **Settings → Propex** tab includes:
+
+- **Project detection:** use a frontmatter key and optional expected value, or treat notes in a root folder as projects.
+- **Project names:** use the filename or a configured frontmatter key.
+- **Categories and currency:** manage categories and choose the base currency for new entries.
+- **Validation and context:** optionally require a project or comment; enable smart project context to prefill a nearby project.
+- **Budget:** configure the project frontmatter key used for budget reporting (default: `budget`). Budget values are interpreted in the base currency.
+- **Overhead:** choose `separate`, `split_equally`, or `proportional`; select active projects using `all_cached`, `period_transactions`, or `frontmatter_flag` criteria.
+- **CSV:** choose comma or semicolon as the separator.
+
+## Data and privacy
+
+Propex is designed for local use. It stores plugin data in the vault's Obsidian plugin data file (`data.json`) and reads project metadata through Obsidian's APIs. It does not require a Propex account or a remote service. Keep your usual vault backups, especially before importing large CSV files or deleting transactions.
+
+## Languages
+
+The interface is available in English and Russian. For other Obsidian locales, Propex falls back to English.

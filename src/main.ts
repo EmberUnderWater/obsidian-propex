@@ -1,114 +1,96 @@
-import {
-	Editor,
-	MarkdownView,
-	MarkdownFileInfo,
-	Modal,
-	Notice,
-	Plugin,
-} from 'obsidian';
-import {
-	DEFAULT_SETTINGS,
-	MyPluginSettings,
-	SampleSettingTab,
-} from './settings';
+import { Notice, Plugin, type WorkspaceLeaf } from "obsidian";
+import { DataStore } from "./data/dataStore";
+import { t } from "./locales";
+import { makeNoteAProject } from "./services/makeProject";
+import { ProjectCache } from "./services/projectCache";
+import { PropexSlashSuggest } from "./ui/components/propexSlashSuggest";
+import { TransactionModal } from "./ui/modals/TransactionModal";
+import { PropexSettingTab } from "./ui/settings/PropexSettingTab";
+import { PropexReportRenderChild } from "./ui/views/PropexReportRenderChild";
+import { LEDGER_VIEW_TYPE, LedgerView } from "./ui/views/LedgerView";
 
-// Remember to rename these classes and interfaces!
+export default class PropexPlugin extends Plugin {
+	dataStore!: DataStore;
+	projectCache!: ProjectCache;
+	private settingTab!: PropexSettingTab;
+	private slashSuggest?: PropexSlashSuggest;
 
-export default class MyPlugin extends Plugin {
-	settings!: MyPluginSettings;
+	async onload(): Promise<void> {
+		this.dataStore = new DataStore(this);
+		await this.dataStore.load();
 
-	async onload() {
-		await this.loadSettings();
+		if (this.dataStore.loadFailed) {
+			new Notice(t("errLoadData"), 0);
+		}
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (_evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
+		this.projectCache = new ProjectCache(this.app, this.dataStore);
+		this.projectCache.registerEvents(this);
+		// Frontmatter may still be indexing at onload; re-scan once layout is ready.
+		this.app.workspace.onLayoutReady(() => {
+			this.projectCache.rebuild();
+		});
+		this.projectCache.init();
+
+		this.settingTab = new PropexSettingTab(this.app, this);
+		this.addSettingTab(this.settingTab);
+
+		this.registerView(LEDGER_VIEW_TYPE, (leaf) => new LedgerView(leaf, this));
+
+		this.registerMarkdownCodeBlockProcessor("propex", (source, el, ctx) => {
+			ctx.addChild(new PropexReportRenderChild(el, this, source, ctx.sourcePath));
 		});
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
+		this.slashSuggest = new PropexSlashSuggest(this.app);
+		this.registerEditorSuggest(this.slashSuggest);
 
-		// This adds a simple command that can be triggered anywhere
+		this.addRibbonIcon("table", t("cmdOpenLedger"), () => {
+			void this.activateLedgerView();
+		});
+
 		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
+			id: "add-transaction",
+			name: t("cmdAddTransaction"),
 			callback: () => {
-				new SampleModal(this.app).open();
+				new TransactionModal(this.app, this).open();
 			},
 		});
-		// This adds an editor command that can perform some operation on the current editor instance
+
 		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (
-				editor: Editor,
-				_ctx: MarkdownView | MarkdownFileInfo,
-			) => {
-				editor.replaceSelection('Sample editor command');
+			id: "open-ledger",
+			name: t("cmdOpenLedger"),
+			callback: () => {
+				void this.activateLedgerView();
 			},
 		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
+
 		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView =
-					this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-				return false;
+			id: "make-project",
+			name: t("cmdMakeProject"),
+			callback: () => {
+				void makeNoteAProject(this, this.app).catch((error: unknown) => {
+					console.error("[Propex] Failed to make note a project", error);
+					new Notice(t("errSaveData"));
+				});
 			},
 		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(activeDocument, 'click', (_evt: MouseEvent) => {
-			new Notice('Click');
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(
-			window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000),
-		);
 	}
 
-	onunload() {}
+	async activateLedgerView(): Promise<void> {
+		const existing = this.app.workspace.getLeavesOfType(LEDGER_VIEW_TYPE);
+		const first = existing[0];
+		if (first) {
+			void this.app.workspace.revealLeaf(first);
+			return;
+		}
 
-	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<MyPluginSettings>,
-		);
+		const leaf: WorkspaceLeaf = this.app.workspace.getLeaf("tab");
+		await leaf.setViewState({ type: LEDGER_VIEW_TYPE, active: true });
+		void this.app.workspace.revealLeaf(leaf);
 	}
 
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
-}
-
-class SampleModal extends Modal {
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
+	onunload(): void {
+		this.settingTab?.cancelPending();
+		this.projectCache?.cancelPending();
+		this.slashSuggest = undefined;
 	}
 }

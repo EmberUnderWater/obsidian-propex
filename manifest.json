@@ -1,11 +1,10 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "propex",
+	"name": "Propex",
 	"version": "1.0.0",
-	"minAppVersion": "1.0.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"minAppVersion": "1.7.2",
+	"description": "Track project-specific and general expenses.",
+	"author": "EmberUnderWater",
+	"authorUrl": "https://github.com/EmberUnderWater",
 	"isDesktopOnly": false
 }
